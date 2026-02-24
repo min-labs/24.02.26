@@ -1,0 +1,18 @@
+[package]
+name = "m13-tests"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+m13-hub = { path = "../hub" }
+ring   = "0.17"
+sha2   = "0.10"
+hkdf   = "0.12"
+rand   = "0.8"
+ml-kem = "0.2"
+ml-dsa = "0.0.4"
+bytemuck = { version = "1", features = ["derive"] }
+
+[[test]]
+name = "integration"
+path = "integration.rs"
