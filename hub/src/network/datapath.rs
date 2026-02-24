@@ -36,14 +36,8 @@ pub fn rx_parse_raw(
         let frame_ptr = unsafe { ctx.umem_base.add(addr as usize) };
         let frame_len = len as usize;
 
-        // === DEBUG HEXDUMP: first packet in batch ===
-        if cfg!(debug_assertions) && stats.parsed == 0 {
-            let dump_len = frame_len.min(120);
-            let hex_bytes: Vec<String> = (0..dump_len).map(|i| {
-                format!("{:02x}", unsafe { *frame_ptr.add(i) })
-            }).collect();
-            eprintln!("[DBG-RX] addr=0x{:x} len={} iface={} hex: {}", addr, frame_len, rx_iface, hex_bytes.join(" "));
-        }
+
+
 
         if frame_len < ETH_HDR_SIZE + M13_HDR_SIZE {
             ctx.slab.free((addr / ctx.frame_size as u64) as u32);

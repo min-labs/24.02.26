@@ -45,14 +45,14 @@ Phase-by-phase audit of `node/src/main.rs`, `node/src/network/datapath.rs`, and 
 | 12 | Bufferbloat | `datapath.rs:183` | TUN qdisc = `fq` (fair queueing only). No AQM, no bandwidth shaping, no sojourn drops. | #46 (existing) |
 | 13 | (Correctness) | `datapath.rs:175` | MSS clamp uses `--clamp-mss-to-pmtu` — PMTUD fails over UDP tunnels. | #47 (existing) |
 
-### `run_udp_worker()` — main.rs L344-751 (408 lines) — **DEAD CODE**
+### `run_udp_worker()` — main.rs L344-751 (408 lines) — ✅ DELETED (Wave 0)
 
 | # | Enemy | File:Line | Defect | TODO# |
 |---|-------|-----------|--------|-------|
-| 14 | **DEAD CODE (408 lines)** | `main.rs:344-751` | `#[allow(dead_code)]` on `run_udp_worker()`. This is the **legacy recvmmsg/sendmmsg fallback** path. Currently 408 lines of completely unreachable code. 30% of main.rs is dead. Comment says "retained for systems without Kernel 6.12+", but there is no runtime dispatch — `main()` always calls `run_uring_worker()`. | #122 (new) |
+| 14 | ~~**DEAD CODE (408 lines)**~~ | ~~`main.rs:344-751`~~ | `run_udp_worker()` fully superseded by `run_uring_worker()`. **DELETED in Wave 0 (2026-02-24).** Node main.rs now 939 lines (was 1,348). | ✅ #122 FIXED |
 
-> [!CAUTION]
-> **VERIFIED SAFE TO DELETE.** `run_udp_worker()` is fully superseded by `run_uring_worker()` (L846-1348). Same signature, same functionality, strictly superior I/O model (io_uring vs recvmmsg/sendmmsg). Zero call sites exist — grep confirms only the definition (L345) and a comment (L842: "Replaces run_udp_worker"). No `cfg`, no feature gate, no runtime dispatch. Recoverable from git history if ever needed.
+> [!NOTE]
+> **VERIFIED DELETED.** `run_udp_worker()` was removed along with its `#[allow(dead_code)]` annotation and orphaned `use std::io::{Read, Write}` import. `cargo check --release` passes with zero errors.
 
 ## Phase 2: `run_uring_worker()` Startup — L846-957 (112 lines)
 
@@ -129,7 +129,7 @@ Phase-by-phase audit of `node/src/main.rs`, `node/src/network/datapath.rs`, and 
 ```
 Phase 1 (main):       ~10 lines / 54   (19%) —  2 enemies (#118-#119)
 Phase 1.5 (cold):      ~0 lines / 153  ( 0%) — 10 enemies (#120-#122 new, #41-#50 existing)
-Dead code:            408 lines / 1348 (30%) —  1 enemy (#122)
+Dead code:            DELETED           (0%) —  #122 FIXED (408 lines removed, Wave 0)
 Phase 2 (startup):    ~32 lines / 112  (29%) —  3 enemies (#123-#125)
 Phase 3 (CQE loop):    ~0 lines / 546  ( 0%) —  9 enemies (#126-#130 new, #53-#55 existing)
 ──────────────────────────────────────────────────────────
@@ -144,7 +144,7 @@ Total Phases 1-3:    ~450 lines / 1348 (33%) — 13 new enemies (#118-#130)
 | **Bufferbloat** | **6** | #123 (SO_SNDBUFFORCE=8MB), #119 (txqueuelen=1000), #130 (pacing bypass) |
 | **Syscall Storm** | 9 | #53/#54/#55 (sock.send bypass io_uring), #121 (27 subprocesses) |
 | **Cache Thrashing** | 1 | #127 (per-frame PBR commit) |
-| **Dead Code** | 1 | #122 (408 lines run_udp_worker) |
+| **Dead Code** | ~~1~~ | ✅ #122 FIXED — 408 lines deleted |
 | **Other/Micro** | 4 | #124 (double args), #125 (double EdtPacer init), #129 (heap alloc) |
 | **BID Leak (P0)** | 1 | #126 (CQE overflow → PBR exhaustion → recv halts) |
 

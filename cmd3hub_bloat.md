@@ -238,7 +238,7 @@ Compare Thread 2: 0/sec (pure busy-poll, no syscalls)
 | 42 | **Cache Thrashing (HOT)** | `main.rs:619-624` | MAX_PEERS scan per TX iteration, up to 72K scans/sec | #111 |
 | 43 | Cache Thrashing | `main.rs:676` | memmove 42B per TX packet = 3.2 MB/sec UMEM writes | #112 |
 | 44 | (Micro) | `main.rs:1466` | scheduler.dequeue() per-element, no batch | #113 |
-| 45 | (Debug only) | `datapath.rs:42` | Vec heap alloc in rx_parse_raw under debug_assertions | #114 |
+| 45 | ~~(Debug only)~~ | ~~`datapath.rs:42`~~ | ~~Vec heap alloc in rx_parse_raw under debug_assertions~~ | ✅ #114 FIXED (Wave 0) |
 | 46 | **BUFFERBLOAT signal** | `protocol.rs:619` | FEEDBACK_RTT=10ms hardcoded, never measured | #115 |
 | 47 | (Micro) | `main.rs:345-366` | CycleStats no AddAssign, 15 manual field adds | #116 |
 | 48 | **BUFFERBLOAT (systemic)** | `datapath.rs:890-932` | rmem/wmem_max=16MB + txqueuelen=1000 = 689ms queue | #117 |

@@ -5,4 +5,3 @@
 pub mod protocol;
 pub mod runtime;
 pub mod spsc;
-pub mod typestate;

@@ -187,13 +187,13 @@
 
 ## 6. OTHERS
 
-### Dead Code (3)
+### Dead Code (3) — ✅ ALL FIXED (Wave 0)
 
-| # | Severity | File:Line | Defect |
-|---|----------|-----------|--------|
-| **68** | P1 | `hub/engine/typestate.rs:1-254` | `typestate.rs` 254 lines fully implemented but **zero call sites** |
-| **122** | P1 | `node/main.rs:344-751` | `run_udp_worker()` **408 lines** dead code with `#[allow(dead_code)]`. SAFE TO DELETE. |
-| **114** | P3 | `hub/datapath.rs:42-44` | `debug_assertions` Vec heap alloc in hot loop (debug only) |
+| # | Severity | File:Line | Defect | Status |
+|---|----------|-----------|--------|--------|
+| **68** | P1 | ~~`hub/engine/typestate.rs:1-254`~~ | `typestate.rs` 254 lines — **DELETED** (zero call sites confirmed) | ✅ FIXED |
+| **122** | P1 | ~~`node/main.rs:344-751`~~ | `run_udp_worker()` 408 lines — **DELETED** (fully superseded by `run_uring_worker()`) | ✅ FIXED |
+| **114** | P3 | ~~`hub/datapath.rs:42-44`~~ | `debug_assertions` Vec heap alloc — **DELETED** | ✅ FIXED |
 
 ### Security (4)
 
@@ -240,12 +240,12 @@
 | **Bufferbloat** | 23 | 8 | 7 | 4 | 4 | #123 (8MB SO_SNDBUF), #106 (silent drop), #109 (slab leak) |
 | **Context Switching** | 7 | 1 | 2 | 2 | 2 | #81 (core collision) |
 | **Cache Thrashing** | 17 | 2 | 6 | 4 | 5 | #110 (37KB/subvec), #111 (72K scans/sec) |
-| **Dead Code** | 3 | — | 2 | — | 1 | #122 (408 lines), #68 (254 lines) |
+| ~~**Dead Code**~~ | ~~3~~ | — | ~~2~~ | — | ~~1~~ | ✅ ALL FIXED (Wave 0): #122, #68, #114 deleted |
 | **Security** | 4 | 1 | — | 3 | — | #64 (no anti-replay window) |
 | **Correctness** | 7 | 1 | 2 | 3 | 1 | #126 (BID leak → recv halt) |
 | **Bloat/Micro** | 8 | — | — | 1 | 7 | #57 (TUN BID starvation) |
 | **TOTAL** | **90** | **16** | **27** | **23** | **24** | — |
-| *Active (excl. #93)* | **89** | | | | | |
+| *Active (excl. #93, #68, #114, #122)* | **86** | | | | | |
 
 ---
 
@@ -313,19 +313,17 @@ EdtPacer hardcoded 100Mbps (#107)  →  TX_RING_SIZE=256, silent drop (#106)
 > prescriptions, because the defects would sabotage the fix. Others are independent
 > discoveries with no matching prescription.
 
-### Wave 0: Dead Code Eradication (Zero Risk, Zero Side Effects)
+### Wave 0: Dead Code Eradication — ✅ COMPLETE
 
-> **Lowest hanging fruit.** Deleting unreachable code cannot break anything.
-> Reduces cognitive load for every subsequent wave (662 fewer lines to scroll past).
-> Establishes clean `cargo check` baseline for all future diffs.
+> **Executed 2026-02-24.** All dead code deleted. `cargo check --release` passes both binaries with zero errors.
 
-| # | Binary | Defect | Lines Killed |
-|---|--------|--------|--------------|
-| **#122** | Node | Delete `run_udp_worker()` — fully superseded by `run_uring_worker()` | **408 lines** (30% of main.rs) |
-| **#68** | Hub | Wire or delete `typestate.rs` — 254 lines, zero call sites | **254 lines** |
-| **#114** | Hub | Remove `debug_assertions` Vec heap alloc in `rx_parse_raw` hot loop | ~3 lines (dead in release) |
+| # | Binary | Defect | Lines Killed | Status |
+|---|--------|--------|--------------|--------|
+| **#122** | Node | Deleted `run_udp_worker()` — fully superseded by `run_uring_worker()` | **408 lines** (30% of main.rs) | ✅ DONE |
+| **#68** | Hub | Deleted `typestate.rs` — 254 lines, zero call sites | **254 lines** | ✅ DONE |
+| **#114** | Hub | Removed `debug_assertions` Vec heap alloc in `rx_parse_raw` hot loop | **7 lines** | ✅ DONE |
 
-> **── `cargo check` both binaries. Verify zero regressions. ──**
+> **── `cargo check --release` verified. Zero regressions. Node: 939 lines (was 1,348). ──**
 
 ### Wave 1: P0 Correctness — Prevent Datapath Halts
 

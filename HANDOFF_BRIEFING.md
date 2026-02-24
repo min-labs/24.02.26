@@ -3,7 +3,8 @@
 > **Date**: 2026-02-24  
 > **From**: Previous thread (context saturated)  
 > **To**: Next thread  
-> **Classification**: Sprint 2.5 execution directive
+> **Classification**: Sprint 2.5 execution directive  
+> **Wave 0 Status**: ✅ COMPLETE (2026-02-24) — 669 lines of dead code eradicated
 
 ---
 
@@ -25,8 +26,8 @@ WireGuard (same architecture, in-kernel) retains **90%** throughput. The single 
 
 The complete battle plan is in **[Operation_Phoenix.md](file:///home/m13/Desktop/m13_test/Operation_Phoenix.md)** (432 lines). It contains:
 
-- **89 active defects** organized by enemy class (Syscall Storms, Bufferbloat, Cache Thrashing, Context Switching, Security, Correctness)
-- **6-wave execution order** (Wave 0: dead code → Wave 1: P0 correctness → Wave 2: kill tunnel collapse → Wave 3: hot-path syscalls → Wave 4: cache thrashing → Wave 5: cold-path + hardening)
+- **86 active defects** organized by enemy class (Syscall Storms, Bufferbloat, Cache Thrashing, Context Switching, Security, Correctness)
+- **6-wave execution order** (Wave 0: dead code ✅ DONE → Wave 1: P0 correctness → Wave 2: kill tunnel collapse → Wave 3: hot-path syscalls → Wave 4: cache thrashing → Wave 5: cold-path + hardening)
 - **Per-defect severity, file:line, and fix mapping**
 
 ### The Sprint Definition
@@ -57,12 +58,14 @@ Both include: dependency chains, handshake sequence, thread topology diagrams.
 
 ## EXECUTION ORDER (condensed from Operation_Phoenix.md)
 
-### Wave 0: Dead Code (zero risk, do first)
-| # | What | Lines Killed |
-|---|------|-------------|
-| #122 | Delete `run_udp_worker()` in `node/main.rs` | 408 lines |
-| #68 | Wire or delete `typestate.rs` in Hub | 254 lines |
-| #114 | Remove `debug_assertions` Vec in `rx_parse_raw` | ~3 lines |
+### Wave 0: Dead Code — ✅ COMPLETE (2026-02-24)
+| # | What | Lines Killed | Status |
+|---|------|-------------|--------|
+| #122 | Deleted `run_udp_worker()` in `node/main.rs` | 408 lines | ✅ DONE |
+| #68 | Deleted `typestate.rs` in Hub | 254 lines | ✅ DONE |
+| #114 | Removed `debug_assertions` Vec in `rx_parse_raw` | 7 lines | ✅ DONE |
+
+> `cargo check --release` verified. Zero regressions. Node: 939 lines (was 1,348).
 
 ### Wave 1: P0 Correctness (prevent datapath halts)
 | # | What | Why First |
@@ -95,14 +98,13 @@ Both include: dependency chains, handshake sequence, thread topology diagrams.
 ```
 /home/m13/Desktop/m13_test/
 ├── hub/src/
-│   ├── main.rs          (1,515 lines — VPP main loop, worker_entry, TX graph)
+│   ├── main.rs          (1,514 lines — VPP main loop, worker_entry, TX graph)
 │   ├── engine/
 │   │   ├── protocol.rs  (1,099 lines — PeerTable, Scheduler, JitterBuffer)
 │   │   ├── runtime.rs   (723 lines — FixedSlab, TSC, Telemetry)
-│   │   ├── typestate.rs  (254 lines — DEAD CODE, zero call sites)
 │   │   └── spsc.rs      (150 lines — SPSC ring)
 │   ├── network/
-│   │   ├── datapath.rs   (1,037 lines — VPP pipeline, TUN, NAT)
+│   │   ├── datapath.rs   (1,030 lines — VPP pipeline, TUN, NAT)
 │   │   ├── xdp.rs        (358 lines — AF_XDP engine)
 │   │   ├── uring_reactor.rs (254 lines — io_uring WiFi reactor)
 │   │   ├── uso_pacer.rs  (261 lines — EDT pacer)
@@ -113,7 +115,7 @@ Both include: dependency chains, handshake sequence, thread topology diagrams.
 │       ├── handshake.rs  (182 lines — PQC Hub responder)
 │       └── aead.rs       (115 lines — AES-256-GCM)
 ├── node/src/
-│   ├── main.rs          (1,348 lines — 3-pass VPP, EDT, handshake)
+│   ├── main.rs          (939 lines — 3-pass VPP, EDT, handshake) [was 1,348 — Wave 0 deleted 408 lines]
 │   ├── engine/
 │   │   ├── protocol.rs  (450 lines — wire format, assembler)
 │   │   └── runtime.rs   (291 lines — NodeState FSM, TSC)
@@ -124,7 +126,7 @@ Both include: dependency chains, handshake sequence, thread topology diagrams.
 │   └── cryptography/
 │       ├── aead.rs       (377 lines — batch AEAD)
 │       └── handshake.rs  (212 lines — PQC Node initiator)
-├── Operation_Phoenix.md  (432 lines — the battle plan)
+├── Operation_Phoenix.md  (434 lines — the battle plan)
 ├── TODO.md              (1,183 lines — full roadmap + Sprint 2.5 details)
 ├── README.md            (32 lines — M13 system description)
 ├── cmd3_hub_runtime_trace.md  (Hub execution flow)
@@ -164,8 +166,8 @@ sudo ./target/release/m13-hub --monitor
 
 ## FIRST ACTION FOR NEXT THREAD
 
-1. Read `Operation_Phoenix.md` — the complete battle plan
-2. Read `TODO.md` lines 380-800 — Sprint 2.5 definition with all 40 fixes
-3. Execute **Wave 0** (dead code deletion) — zero risk, establishes clean baseline
+1. ~~Read `Operation_Phoenix.md` — the complete battle plan~~ ✅
+2. ~~Read `TODO.md` lines 380-800 — Sprint 2.5 definition with all 40 fixes~~ ✅
+3. ~~Execute **Wave 0** (dead code deletion) — zero risk, establishes clean baseline~~ ✅ DONE
 4. Execute **Wave 1** (P0 correctness) — prevent datapath halts
 5. Execute **Wave 2** (kill tunnel collapse) — the main event

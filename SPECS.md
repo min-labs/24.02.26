@@ -59,8 +59,7 @@ m13/
 │       │   ├── mod.rs
 │       │   ├── protocol.rs         ← Wire format, peer management, scheduling
 │       │   ├── runtime.rs          ← Telemetry, slab allocator, core pinning
-│       │   ├── spsc.rs             ← Lock-free SPSC ring
-│       │   └── typestate.rs        ← Compile-time FSM typestates
+│       │   └── spsc.rs             ← Lock-free SPSC ring
 │       ├── network/
 │       │   ├── mod.rs
 │       │   ├── xdp.rs              ← AF_XDP zero-copy engine
@@ -697,7 +696,7 @@ run_executive()                                               [hub/src/main.rs:1
         │       │
         │       ├── Handshake fragments:                       [main.rs:554-649]
         │       │   process_fragment() →
-        │       │     typestate validate_frag_index() + validate_frag_data_bounds()
+        │       │     validate_frag_index() + validate_frag_data_bounds()
         │       │     Assembler.feed() →
         │       │     process_handshake_message() →
         │       │       Copy payload into payload_arena[pidx]
@@ -859,9 +858,9 @@ run_uring_worker()                                             [node/src/main.rs
     │   scatter() → handshake_out vector
     │
     │   process_fragment():                                    [hub/main.rs:554-596]
-    │   ├── typestate::validate_frag_index(index, total)       [hub/engine/typestate.rs]
+    │   ├── validate_frag_index(index, total)
     │   │   Branchless: (index >= total) as usize → panic-free clamp
-    │   ├── typestate::validate_frag_data_bounds(offset, len)  [hub/engine/typestate.rs]
+    │   ├── validate_frag_data_bounds(offset, len)
     │   │   Branchless OOB check preventing adversarial slice
     │   └── peers.assemblers[pidx].feed(msg_id, index, total, offset, data)
     │       On completion (all 3 fragments received):

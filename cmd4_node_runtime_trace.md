@@ -1,6 +1,8 @@
 # Cmd 4: `sudo RUST_LOG=debug ./target/release/m13-node --hub-ip 67.213.122.151:443 --tunnel`
 
 > **This trace follows exactly what happens, in order, from the moment the kernel loads the ELF binary into memory until the 3-pass VPP event loop reaches steady state.**
+>
+> **Line numbers updated 2026-02-24** to reflect Wave 0 deletion of `run_udp_worker()` (409 lines removed at L344). `node/src/main.rs` is now 939 lines.
 
 ---
 
@@ -42,11 +44,11 @@ main:L82      run_uring_worker("67.213.122.151:443", echo=false, hexdump=false, 
 
 ---
 
-## PHASE 1: WORKER BOOT (run_uring_worker, main.rs L846-955)
+## PHASE 1: WORKER BOOT (run_uring_worker, main.rs L437-546)
 
 ### Step 1.1 — TSC Clock Calibration
 ```
-L849          calibrate_tsc()  →  engine/runtime.rs
+L440          calibrate_tsc()  →  engine/runtime.rs
               ├─ CPUID leaf 0x80000007 bit 8: verify invariant TSC
               ├─ 100× warmup loop
               ├─ Two-point calibration over 100ms
@@ -58,7 +60,7 @@ L849          calibrate_tsc()  →  engine/runtime.rs
 
 ### Step 1.2 — System Tuning
 ```
-L850          tune_system_buffers()  → main.rs L288-342
+L441          tune_system_buffers()  → main.rs L288-342
               ├─ WiFi power_save OFF on all wireless interfaces
               ├─ sysctl: rmem_max/wmem_max = 8MB, rmem_default/wmem_default = 4MB
               ├─ sysctl: netdev_budget=600, netdev_budget_usecs=8000
@@ -70,7 +72,7 @@ L850          tune_system_buffers()  → main.rs L288-342
 
 ### Step 1.3 — EDT Pacer Initialization
 ```
-L855-878      EdtPacer::new(&cal, 100_000_000)  →  uso_pacer.rs
+L446-469      EdtPacer::new(&cal, 100_000_000)  →  uso_pacer.rs
               ├─ link_bps = 100 Mbps (default WiFi MANET)
               ├─ ns_per_byte = 8e9 / 100e6 = 80 ns/byte
               └─ Zero-spin: returns release timestamp, never blocks
@@ -80,7 +82,7 @@ L855-878      EdtPacer::new(&cal, 100_000_000)  →  uso_pacer.rs
 
 ### Step 1.4 — UDP Socket (Connected Mode)
 ```
-L882-898      sock = UdpSocket::bind("0.0.0.0:0")
+L473-489      sock = UdpSocket::bind("0.0.0.0:0")
               sock.connect("67.213.122.151:443")
               ├─ Connected mode: kernel caches route lookup → sendto-free
               ├─ fcntl(F_SETFL, O_NONBLOCK)
@@ -90,7 +92,7 @@ L882-898      sock = UdpSocket::bind("0.0.0.0:0")
 
 ### Step 1.5 — io_uring PBR Reactor (uring_reactor.rs L73-128)
 ```
-L903          UringReactor::new(raw_fd, sq_thread_cpu=0)
+L494          UringReactor::new(raw_fd, sq_thread_cpu=0)
               ├─ PBR metadata: mmap(2MB-aligned) for 4096 × 16-byte entries
               ├─ Data region: mmap(MAP_HUGETLB | MAP_POPULATE | MAP_LOCKED)
               │   Total: (4096 + 64) × 2048 = ~8.5MB (PBR metadata + all frame buffers)
@@ -109,7 +111,7 @@ L903          UringReactor::new(raw_fd, sq_thread_cpu=0)
 
 ### Step 1.6 — TUN Read Arming
 ```
-L910-914      For bid in 4096..4159 (TUN_RX_ENTRIES = 64):
+L501-505      For bid in 4096..4159 (TUN_RX_ENTRIES = 64):
               ├─ reactor.arm_tun_read(tun_fd, bid)
               │   Read at offset +62 → leaves room for M13 header prepend
               │   Max payload: min(2048 - 62, 1380) = 1380 bytes
@@ -120,7 +122,7 @@ L910-914      For bid in 4096..4159 (TUN_RX_ENTRIES = 64):
 
 ### Step 1.7 — State + Assembler Init
 ```
-L917-937      seq_tx = 0
+L508-528      seq_tx = 0
               HexdumpState::new(false)
               alloc_asm_arena(8 slots) → mmap(MAP_HUGETLB | MAP_POPULATE)
               Assembler::init(arena_ptr)
@@ -130,7 +132,7 @@ L917-937      seq_tx = 0
 
 ### Step 1.8 — Registration Frame
 ```
-L940-944      reg = build_m13_frame(&src_mac, &hub_mac, seq=0, FLAG_CONTROL)
+L531-535      reg = build_m13_frame(&src_mac, &hub_mac, seq=0, FLAG_CONTROL)
               ├─ 62 bytes: ETH(14) + M13(48), magic=0xD1, version=0x01
               sock.send(&reg) → UDP to 67.213.122.151:443
               seq_tx = 1
@@ -142,7 +144,7 @@ L940-944      reg = build_m13_frame(&src_mac, &hub_mac, seq=0, FLAG_CONTROL)
 
 ### Step 1.9 — M13 Header Template
 ```
-L947-953      hdr_template[0..62]:
+L538-544      hdr_template[0..62]:
               ├─ dst = hub_mac (broadcast)
               ├─ src = src_mac
               ├─ ethertype = 0x88B5
@@ -157,7 +159,7 @@ L947-953      hdr_template[0..62]:
 
 ---
 
-## PHASE 2: 3-PASS VPP MAIN LOOP — STEADY STATE (main.rs L957-1348)
+## PHASE 2: 3-PASS VPP MAIN LOOP — STEADY STATE (main.rs L548-939)
 
 ```
 This is an infinite loop. Each iteration processes a batch of events.
@@ -166,15 +168,15 @@ The loop has THREE PASSES followed by post-processing.
 
 ### Cycle Pre-Check: Timeout
 ```
-L962-966      If NOT Established && 30s elapsed:
+L553-557      If NOT Established && 30s elapsed:
               → Log timeout, break loop
 ```
 
 ### ═══ PASS 0: CQE Drain + Classify (L978-1089) ═══
 
 ```
-L979          reactor.ring.completion().sync()  → memory barrier, refresh CQ
-L981-988      Batch drain: for cqe in ring.completion():
+L570          reactor.ring.completion().sync()  → memory barrier, refresh CQ
+L572-579      Batch drain: for cqe in ring.completion():
               ├─ Store (result, flags, user_data) into cqe_batch[128]
               └─ If overflow: SILENTLY DROPPED (⚠️ Defect D2)
 ```
